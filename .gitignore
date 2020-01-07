@@ -1,0 +1,6 @@
+Debug/
+Release/
+*.u2d
+*.mod
+*.dat
+*.vfproj
