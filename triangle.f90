@@ -6,16 +6,15 @@ type node
     ! DOUBLE PRECISION f
 end type
 type triangle
-    PRIVATE
     TYPE(node) :: nodes(6)
 end type
 
 contains
-subroutine create_quad_matrix(K_mat,f_vec,f_at_points,n,triangles)
+subroutine create_quad_matrix(K_mat,f_vec,f_at_points,triangles)
     implicit none
-    INTEGER , INTENT(IN) :: n ! size of matrix A(n*n) and vector b
-    DOUBLE PRECISION , INTENT(OUT) :: K_mat(n,n),f_vec(n)
-    DOUBLE PRECISION , INTENT(IN) :: f_at_points(n)
+    !INTEGER , INTENT(IN) :: n ! size of matrix A(n*n) and vector b
+    DOUBLE PRECISION , INTENT(OUT) :: K_mat(:,:),f_vec(:)
+    DOUBLE PRECISION , INTENT(IN) :: f_at_points(:)
     TYPE(triangle) :: triangles(:),triangle_i
     DOUBLE PRECISION :: points_i(6,2),Ke(6,6),fe(3)
     INTEGER :: ids_i(6)
@@ -33,6 +32,7 @@ subroutine create_quad_matrix(K_mat,f_vec,f_at_points,n,triangles)
         Ke = create_e_coeffmat_triangle_q2(points_i)
         fe = create_fe_vector(points_i(1:3,:),f_at_points(ids_i(1:3)))
         call patch_to_k_mat(K_mat,Ke,ids_i)
+        call patch_to_f_vec(f_vec,fe,ids_i(1:3))
     end do
 end subroutine create_quad_matrix
 
@@ -84,4 +84,15 @@ subroutine patch_to_k_mat(k,ke,ids)
         end do
     end do
 end subroutine patch_to_k_mat
+subroutine patch_to_f_vec(f_vec,fe,ids)
+    ! if ids' size is n, then the shape of Ke should be (n,n)
+    implicit none
+    DOUBLE PRECISION , INTENT(INOUT) :: f_vec(:)
+    DOUBLE PRECISION ,INTENT(IN) :: fe(:)
+    INTEGER , INTENT(IN) :: ids(:)
+    INTEGER i
+    do i = 1,3
+        f_vec(ids(i)) = f_vec(ids(i)) + fe(i)
+    end do
+end subroutine patch_to_f_vec
 end module two_dimentional
