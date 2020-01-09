@@ -11,17 +11,18 @@ type triangle
 end type
 
 contains
-subroutine create_quad_matrix(K,f,n,triangles)
+subroutine create_quad_matrix(K_mat,f_vec,f_at_points,n,triangles)
     implicit none
     INTEGER , INTENT(IN) :: n ! size of matrix A(n*n) and vector b
-    DOUBLE PRECISION , INTENT(OUT) :: K(n,n),f(n)
+    DOUBLE PRECISION , INTENT(OUT) :: K_mat(n,n),f_vec(n)
+    DOUBLE PRECISION , INTENT(IN) :: f_at_points(n)
     TYPE(triangle) :: triangles(:),triangle_i
-    DOUBLE PRECISION :: points_i(6,2),Ke(6,6)
+    DOUBLE PRECISION :: points_i(6,2),Ke(6,6),fe(3)
     INTEGER :: ids_i(6)
-    INTEGER i,j,l
+    INTEGER i,l
 
-    K(:,:) = 0
-    f(:) = 0
+    K_mat(:,:) = 0
+    f_vec(:) = 0
 
     do i = 1,ubound(triangles,1)
         triangle_i = triangles(i)
@@ -30,7 +31,8 @@ subroutine create_quad_matrix(K,f,n,triangles)
             points_i(l,:) = triangle_i%nodes(l)%point
         end do
         Ke = create_e_coeffmat_triangle_q2(points_i)
-        call patch_to_k_mat(K,Ke,ids_i)
+        fe = create_fe_vector(points_i(1:3,:),f_at_points(ids_i(1:3)))
+        call patch_to_k_mat(K_mat,Ke,ids_i)
     end do
 end subroutine create_quad_matrix
 
@@ -55,6 +57,10 @@ pure function create_fe_vector(points,f) result(f_e)
     DOUBLE PRECISION ,INTENT(IN) :: points(3,2)
     DOUBLE PRECISION , INTENT(IN) :: f(3)
     DOUBLE PRECISION :: f_e(3)
+    DOUBLE PRECISION ,PARAMETER :: mat(3,3) = reshape(&
+    [11/12.,-0.25,-0.875,-0.25,0.125,5./24,-0.875,5./24,11./12]&
+    ,[3,3])
+    f_e = matmul(mat,f)*jacobian_for_change_variable(points)
     ! TODO
 end function create_fe_vector
 
