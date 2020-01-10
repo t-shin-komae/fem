@@ -37,7 +37,7 @@ end module utils
         use utils 
         use mkl_service 
         implicit none 
-        DOUBLE PRECISION , ALLOCATABLE :: K(:,:),f_vec(:),f_at_points(:)
+        DOUBLE PRECISION , ALLOCATABLE :: K(:,:),f_vec(:),f_at_points(:),dirichlet_val(:)
         type(triangle), ALLOCATABLE :: triangles(:)
         type(node) ,ALLOCATABLE :: nodes(:,:)
         INTEGER n,num_points_in_one_edge, num_points, num_triangles
@@ -55,6 +55,7 @@ end module utils
             triangles(num_triangles),&
             nodes(num_points_in_one_edge,num_points_in_one_edge),&
             dirichlet_ids((num_points_in_one_edge-1)*4),&
+            dirichlet_val((num_points_in_one_edge-1)*4),&
             ipiv(num_points))
 
         ! 正方形の領域にメッシュを作る
@@ -63,8 +64,17 @@ end module utils
         do j = 1,num_points_in_one_edge
             do i = 1,num_points_in_one_edge
                 nodes(i,j) = node(num_points_in_one_edge*(i-1)+j,[(i-1)*10.d0/2.d0/n,(j-1)*10.d0/2.d0/n])
-                if ( i==1 .or. i == num_points_in_one_edge .or. j == 1 .or. j == num_points_in_one_edge ) then
+                if ( i==1 .or. i == num_points_in_one_edge  ) then
                     dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
+                    dirichlet_val(count) = 0.d0
+                    count = count + 1
+                else if (j == 1 ) then
+                    dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
+                    dirichlet_val(count) = 2.d0
+                    count = count + 1
+                else if (j == num_points_in_one_edge) then
+                    dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
+                    dirichlet_val(count) = -1.d0
                     count = count + 1
                 end if
             end do
@@ -84,13 +94,14 @@ end module utils
             end do
         end do
         
-        f_at_points = 1.d0 ! f=1に固定 ふくざつな関数でもOK
+        ! おそらくfにバグあり
+        f_at_points = 0.d0 ! f=1に固定 ふくざつな関数でもOK
 
         call create_quad_matrix(K,f_vec,f_at_points,triangles)
         f_vec = - f_vec
         !call print_mat(K)
         do i = 1, ubound(dirichlet_ids,1)
-            call dirichlet(K,f_vec,dirichlet_ids(i),0.d0)
+            call dirichlet(K,f_vec,dirichlet_ids(i),dirichlet_val(i))
         end do
         !call print_mat(K)
         call dgetrf(num_points,num_points,K,num_points,ipiv,info)
@@ -101,6 +112,7 @@ end module utils
             do j = 1,num_points_in_one_edge
                 write(18,*) nodes(i,j)%point(1),',',nodes(i,j)%point(2),',',f_vec(nodes(i,j)%id)
             end do
+            write(18,*) ' '
         end do
         close(18)
         print *,'Hello end'
