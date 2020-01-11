@@ -63,18 +63,18 @@ end module utils
         count = 1
         do j = 1,num_points_in_one_edge
             do i = 1,num_points_in_one_edge
-                nodes(i,j) = node(num_points_in_one_edge*(i-1)+j,[(i-1)*10.d0/2.d0/n,(j-1)*10.d0/2.d0/n])
+                nodes(i,j) = node(id = num_points_in_one_edge*(i-1)+j,point = [(i-1)*1.d0/2.d0/n,(j-1)*1.d0/2.d0/n])
                 if ( i==1 .or. i == num_points_in_one_edge  ) then
                     dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
                     dirichlet_val(count) = 0.d0
                     count = count + 1
                 else if (j == 1 ) then
                     dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
-                    dirichlet_val(count) = 2.d0
+                    dirichlet_val(count) = 0.d0
                     count = count + 1
                 else if (j == num_points_in_one_edge) then
                     dirichlet_ids(count) = num_points_in_one_edge*(i-1)+j
-                    dirichlet_val(count) = -1.d0
+                    dirichlet_val(count) = 0.d0
                     count = count + 1
                 end if
             end do
@@ -94,8 +94,7 @@ end module utils
             end do
         end do
         
-        ! おそらくfにバグあり
-        f_at_points = 0.d0 ! f=1に固定 ふくざつな関数でもOK
+        f_at_points = 1.d0 ! f=1に固定 ふくざつな関数でもOK
 
         call create_quad_matrix(K,f_vec,f_at_points,triangles)
         f_vec = - f_vec
@@ -103,7 +102,6 @@ end module utils
         do i = 1, ubound(dirichlet_ids,1)
             call dirichlet(K,f_vec,dirichlet_ids(i),dirichlet_val(i))
         end do
-        !call print_mat(K)
         call dgetrf(num_points,num_points,K,num_points,ipiv,info)
         call dgetrs('N',num_points,1, K,num_points,ipiv,f_vec,num_points,info)
         open(18,file = 'ans.csv',status='replace')

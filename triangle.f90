@@ -3,7 +3,6 @@ implicit none
 type node
     INTEGER id
     DOUBLE PRECISION point(2)
-    ! DOUBLE PRECISION f
 end type
 type triangle
     TYPE(node) :: nodes(6)
@@ -40,16 +39,35 @@ pure function create_e_coeffmat_triangle_q2(points) result(K_e)
     implicit none
     DOUBLE PRECISION ,INTENT(IN) :: points(3,2)
     DOUBLE PRECISION :: K_e(6,6)
-    DOUBLE PRECISION , PARAMETER :: K_before(6,6) = reshape(&
-    [1.,1/6.,1/6.,-2/3.,-2/3.,0.,&
-    1/6.,0.5,0.,-2/3.,0.,0.,&
-    1/6.,0.,0.5,0.,-2/3.,0.,&
-    -2/3.,-2/3.,0.,8/3.,0.,-4/3.,&
-    -2/3.,0.,-2/3.,0.,8/3.,-4/3.,&
-    0.,0.,0.,-4/3.,-4/3.,8/3.]&
-    ,[6,6])
-
-    K_e = K_before * jacobian_for_change_variable(points(1:3,:))
+    DOUBLE PRECISION , PARAMETER :: phi_xi_phi_xi(6,6) = reshape(&
+    [0.5, 0.166666666666667, 0., -0.666666666666667, 0., 0.,&
+       0.166666666666667, 0.5, 0., -0.666666666666667, 0., 0.,&
+       0., 0., 0., 0., 0., 0., -0.666666666666667, -0.666666666666667, 0.,&
+       1.33333333333333, 0., 0., 0., 0., 0., 0., 1.33333333333333,&
+       -1.33333333333333, 0., 0., 0., 0., -1.33333333333333, 1.33333333333333],[6,6])
+    DOUBLE PRECISION , PARAMETER :: phi_xi_phi_eta(6,6) = reshape(&
+    [1.00000000000000, 0.166666666666667, 0.166666666666667,&
+       -0.666666666666667, 0., -0.666666666666667, 0.166666666666667, 0.,&
+       -0.166666666666667, -0.666666666666667, 0.666666666666667, 0.,&
+       0.166666666666667, -0.166666666666667, 0., 0., 0.666666666666667,&
+       -0.666666666666667, -0.666666666666667, -0.666666666666667, 0.,&
+       1.33333333333333, -1.33333333333333, 1.33333333333333, 0.,&
+       0.666666666666667, 0.666666666666667, -1.33333333333333,&
+       1.33333333333333, -1.33333333333333, -0.666666666666667, 0.,&
+       -0.666666666666667, 1.33333333333333, -1.33333333333333,&
+       1.33333333333333],[6,6])
+    DOUBLE PRECISION, PARAMETER :: phi_eta_phi_eta(6,6) = reshape(&
+        [0.5, 0., 0.166666666666667, 0., 0., -0.666666666666667,&
+       0., 0., 0., 0., 0., 0., 0.166666666666667, 0., 0.500000000000000, 0., 0.,&
+       -0.666666666666667, 0., 0., 0., 1.33333333333333, -1.33333333333333,&
+       0., 0., 0., 0., -1.33333333333333, 1.33333333333333, 0.,&
+       -0.666666666666667, 0., -0.666666666666667, 0., 0., 1.33333333333333],&
+    [6,6])
+    DOUBLE PRECISION x2(2),x3(2)
+    x2 = points(2,:)-points(1,:)
+    x3 = points(3,:)-points(1,:)
+    K_e = (phi_xi_phi_xi*DOT_PRODUCT(x2,x2)-phi_xi_phi_eta*DOT_PRODUCT(x2,x3)+phi_eta_phi_eta*DOT_PRODUCT(x3,x3)) &
+    /jacobian_for_change_variable(points(1:3,:))
 end function create_e_coeffmat_triangle_q2
 
 pure function create_fe_vector(points,f) result(f_e)
@@ -58,10 +76,11 @@ pure function create_fe_vector(points,f) result(f_e)
     DOUBLE PRECISION , INTENT(IN) :: f(3)
     DOUBLE PRECISION :: f_e(3)
     DOUBLE PRECISION ,PARAMETER :: mat(3,3) = reshape(&
-    [11/12.,-0.25,-0.875,-0.25,0.125,5./24,-0.875,5./24,11./12]&
+    ![11/12.,-0.25,-0.875,-0.25,0.125,5./24,-0.875,5./24,11./12]&
+    [1/12.,1/24.,1/24.,1/24.,1/12.,1/24.,1/24.,1/24.,1/12.]&
     ,[3,3])
-    f_e = matmul(mat,f)*jacobian_for_change_variable(points)
-    ! TODO
+    f_e = matmul(mat,f)*jacobian_for_change_variable(points)!*jacobian_for_change_variable(points)
+
 end function create_fe_vector
 
 pure function jacobian_for_change_variable(points) result(jacobian)
